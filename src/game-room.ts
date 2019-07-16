@@ -1,11 +1,12 @@
 import { Room } from "colyseus";
+import { State } from './state'
 
-export class ChatRoom extends Room {
-    // this room supports only 4 clients connected
-    maxClients = 4;
+export class GameRoom extends Room {
+    maxClients = 2;
 
     onInit (options) {
-        console.log("BasicRoom created!", options);
+        console.log("Room created!", options);
+        this.setState(new State());
     }
 
     onJoin (client) {
