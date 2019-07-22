@@ -25,6 +25,7 @@ export class GameRoom extends Room<State> {
     gridSize = 8;
 
     placements: Array<Array<number>>;
+    playersPlaced: number;
 
     players: Array<any>;
 
@@ -49,9 +50,44 @@ export class GameRoom extends Room<State> {
         this.state.phase = 'waiting';
     }
 
-    onMessage (client, data) {
-        console.log("BasicRoom received message from", client.sessionId, ":", data);
-        this.broadcast(`(${ client.sessionId }) ${ data.message }`);
+    onMessage (client, message) {
+        console.log("Received message from", client.sessionId, ":", message);
+        
+        if (!message || !Array.isArray(message) || message.length === 0) return;
+
+        let player = this.players.find((player) => {
+            player.client.id === client.id
+        });
+
+        let command: string = message[0];
+
+        if (!player) return;
+
+        switch (command) {
+            case 'place':
+                console.log('player ' + player.seat + ' placed ships');
+                this.playersPlaced++;
+
+                if (this.playersPlaced == 2) {
+                    this.state.phase = 'battle';
+                }
+                break;
+            case 'turn':
+                if (this.state.playerTurn != player.seat) return; // ignore if not your turn
+
+                let target = message[1];
+                console.log('player ' + player.seat + ' targets ' + target);
+
+                // TODO: update shots and ships
+
+                // TODO: check for victory
+
+                // ... else
+
+                this.state.playerTurn = this.state.playerTurn == 0 ? 1 : 0;
+            default:
+                console.log('unknown command');
+        }
     }
 
     onDispose () {
@@ -62,6 +98,8 @@ export class GameRoom extends Room<State> {
         this.placements = new Array<Array<number>>();
         this.placements[0] = new Array<number>();
         this.placements[1] = new Array<number>();
+
+        this.playersPlaced = 0;
 
         let cellCount = this.gridSize * this.gridSize;
 
@@ -86,5 +124,4 @@ export class GameRoom extends Room<State> {
 
         this.setState(state);
     }
-
 }
