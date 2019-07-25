@@ -1,64 +1,48 @@
 import { Room } from "colyseus";
-import { State } from './state'
-import { string, number } from "@colyseus/schema/lib/encoding/decode";
-
-const shipTypes = [
-    {
-        id: 1,
-        name: 'scout',
-        size: 2
-    },
-    {
-        id: 2,
-        name: 'cruiser',
-        size: 3
-    },
-    {
-        id: 3,
-        name: 'carrier',
-        size: 5
-    }
-];
+import { State } from './state';
 
 export class GameRoom extends Room<State> {
     maxClients = 2;
     gridSize: number = 8;
-    totalShipHealth: number = shipTypes.map((shipType) => shipType.size).reduce((a, b) => a + b);
+    startingFleetHealth: number = 2 + 3 + 5;
     playerHealth: Array<number>;
     placements: Array<Array<number>>;
     playersPlaced: number = 0;
-    players: Array<any>;
+    players: Map<string, any>;
 
     onInit (options) {
-        console.log("Room created!", options);
+        console.log("room created!", options);
+
         this.reset();
-        this.players = new Array<any>();
-        // this.setState(new State());
     }
 
     onJoin (client) {
-        console.log(`${ client.sessionId } joined.`);
-        this.players.push({ sessionId: client.sessionId, seat: this.players.length + 1 });
+        console.log("client joined", client.sessionId);
 
-        if (this.players.length == 1) {
+        let playerCount = this.players.keys.length;
+        this.players[client.sessionId] = { sessionId: client.sessionId, seat: playerCount + 1 };
+
+        if (playerCount == 1) {
             this.state.player1 = client.sessionId;
-        } else if (this.players.length == 2) {
+        } else if (playerCount == 2) {
             this.state.player2 = client.sessionId;
             this.state.phase = 'place';
         }
     }
 
     onLeave (client) {
-        this.broadcast(`${ client.sessionId } left.`);
+        console.log("client left", client.sessionId);
+
+        delete this.players[client.sessionId];
         this.state.phase = 'waiting';
     }
 
     onMessage (client, message) {
-        console.log("Received message from", client.sessionId, ":", message);
-        
+        console.log("message received", message);
+
         if (!message) return;
 
-        let player = this.players.find((player) => player.sessionId === client.sessionId);
+        let player = this.players[client.sessionId];
 
         if (!player) return;
 
@@ -67,11 +51,11 @@ export class GameRoom extends Room<State> {
         switch (command) {
             case 'place':
                 console.log('player ' + player.seat + ' placed ships');
+
                 this.placements[player.seat - 1] = message['placement'];
                 this.playersPlaced++;
 
                 if (this.playersPlaced == 2) {
-                    console.log('entering battle phase');
                     this.state.phase = 'battle';
                 }
                 break;
@@ -83,7 +67,7 @@ export class GameRoom extends Room<State> {
                 console.log('player ' + player.seat + ' targets ' + targetIndex);
 
                 let shots = player.seat == 1 ? this.state.player1Shots : this.state.player2Shots;
-                let targetPlayerIndex = player.seat == 1 ? 1 : 0;
+                let targetPlayerIndex = player.seat == 1 ? 1 : 0; // target zero-index of other player
                 let targetedPlacement = this.placements[targetPlayerIndex];
 
                 if (targetedPlacement[targetIndex] > 0 && shots[targetIndex] == 0) {
@@ -106,23 +90,23 @@ export class GameRoom extends Room<State> {
     }
 
     onDispose () {
-        console.log("Room destroyed!");
+        console.log("room destroyed!");
     }
 
     reset() {
+        this.players = new Map<string, any>();
+
         this.playerHealth = new Array<number>();
-        this.playerHealth[0] = this.totalShipHealth;
-        this.playerHealth[1] = this.totalShipHealth;
+        this.playerHealth[0] = this.startingFleetHealth;
+        this.playerHealth[1] = this.startingFleetHealth;
 
         this.placements = new Array<Array<number>>();
         this.placements[0] = new Array<number>();
         this.placements[1] = new Array<number>();
 
         let cellCount = this.gridSize * this.gridSize;
-
         let state = new State();
 
-        this.playersPlaced = 0;
         state.phase = 'waiting';
         state.playerTurn = 1;
         state.winningPlayer = -1;
@@ -136,5 +120,6 @@ export class GameRoom extends Room<State> {
         }
 
         this.setState(state);
+        this.playersPlaced = 0;
     }
 }
