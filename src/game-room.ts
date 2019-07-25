@@ -1,5 +1,5 @@
 import { Room } from "colyseus";
-import { State } from './state';
+import { State, Player } from './state';
 
 export class GameRoom extends Room<State> {
     maxClients = 2;
@@ -8,7 +8,6 @@ export class GameRoom extends Room<State> {
     playerHealth: Array<number>;
     placements: Array<Array<number>>;
     playersPlaced: number = 0;
-    players: Map<string, any>;
     playerCount: number = 0;
 
     onInit (options) {
@@ -20,21 +19,23 @@ export class GameRoom extends Room<State> {
     onJoin (client) {
         console.log("client joined", client.sessionId);
 
-        this.players[client.sessionId] = { sessionId: client.sessionId, seat: this.playerCount + 1 };
+        let player: Player = new Player();
+        player.sessionId = client.sessionId;
+        player.seat = this.playerCount + 1;
+
+        this.state.players[client.sessionId] = player;
         this.playerCount++;
 
-        if (this.playerCount == 1) {
-            this.state.player1 = client.sessionId;
-        } else if (this.playerCount == 2) {
-            this.state.player2 = client.sessionId;
+        if (this.playerCount == 2) {
             this.state.phase = 'place';
+            this.lock();
         }
     }
 
     onLeave (client) {
         console.log("client left", client.sessionId);
 
-        delete this.players[client.sessionId];
+        delete this.state.players[client.sessionId];
         this.playerCount--;
         this.state.phase = 'waiting';
     }
@@ -44,7 +45,7 @@ export class GameRoom extends Room<State> {
 
         if (!message) return;
 
-        let player = this.players[client.sessionId];
+        let player: Player = this.state.players[client.sessionId];
 
         if (!player) return;
 
@@ -96,8 +97,6 @@ export class GameRoom extends Room<State> {
     }
 
     reset() {
-        this.players = new Map<string, any>();
-
         this.playerHealth = new Array<number>();
         this.playerHealth[0] = this.startingFleetHealth;
         this.playerHealth[1] = this.startingFleetHealth;

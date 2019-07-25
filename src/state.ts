@@ -1,5 +1,13 @@
 import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
 
+export class Player extends Schema {
+    @type('string')
+    sessionId: string;
+
+    @type('int16')
+    seat: number;
+}
+
 export class State extends Schema {
     @type('string')
     phase: string = "waiting";
@@ -8,13 +16,10 @@ export class State extends Schema {
     playerTurn: number = 1;
 
     @type('int16')
-    winningPlayer: number = 0;
+    winningPlayer: number = -1;
 
-    @type('string')
-    player1: string = '';
-
-    @type('string')
-    player2: string = '';
+    @type({ map: Player })
+    players: MapSchema<Player> = new MapSchema<Player>();
 
     @type(['int16'])
     player1Shots: ArraySchema<number> = new ArraySchema<number>();
