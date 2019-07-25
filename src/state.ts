@@ -7,7 +7,7 @@ export class State extends Schema {
     @type('int16')
     playerTurn: number = 1;
 
-    @type('number')
+    @type('int16')
     winningPlayer: number = 0;
 
     @type('string')

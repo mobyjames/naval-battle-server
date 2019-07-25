@@ -42,10 +42,9 @@ export class GameRoom extends Room<State> {
 
         if (this.players.length == 1) {
             this.state.player1 = client.sessionId;
-            this.state.phase = 'place';
         } else if (this.players.length == 2) {
             this.state.player2 = client.sessionId;
-            // this.state.phase = 'place';
+            this.state.phase = 'place';
         }
     }
 
@@ -71,7 +70,7 @@ export class GameRoom extends Room<State> {
                 this.placements[player.seat - 1] = message['placement'];
                 this.playersPlaced++;
 
-                if (this.playersPlaced == 1) {
+                if (this.playersPlaced == 2) {
                     console.log('entering battle phase');
                     this.state.phase = 'battle';
                 }
@@ -100,6 +99,7 @@ export class GameRoom extends Room<State> {
                 } else {
                     this.state.playerTurn = this.state.playerTurn == 1 ? 2 : 1;
                 }
+                break;
             default:
                 console.log('unknown command');
         }
