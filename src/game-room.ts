@@ -9,6 +9,7 @@ export class GameRoom extends Room<State> {
     placements: Array<Array<number>>;
     playersPlaced: number = 0;
     players: Map<string, any>;
+    playerCount: number = 0;
 
     onInit (options) {
         console.log("room created!", options);
@@ -19,12 +20,12 @@ export class GameRoom extends Room<State> {
     onJoin (client) {
         console.log("client joined", client.sessionId);
 
-        let playerCount = this.players.keys.length;
-        this.players[client.sessionId] = { sessionId: client.sessionId, seat: playerCount + 1 };
+        this.players[client.sessionId] = { sessionId: client.sessionId, seat: this.playerCount + 1 };
+        this.playerCount++;
 
-        if (playerCount == 1) {
+        if (this.playerCount == 1) {
             this.state.player1 = client.sessionId;
-        } else if (playerCount == 2) {
+        } else if (this.playerCount == 2) {
             this.state.player2 = client.sessionId;
             this.state.phase = 'place';
         }
@@ -34,6 +35,7 @@ export class GameRoom extends Room<State> {
         console.log("client left", client.sessionId);
 
         delete this.players[client.sessionId];
+        this.playerCount--;
         this.state.phase = 'waiting';
     }
 
